@@ -9,11 +9,15 @@ on:
         required: false
         default: 'true'
 
-env: 
-  FEEDS_CONF: config/feeds.conf.default
-  CONFIG_FILE: config/.config
+env:
+  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: master
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: .config
+  DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
   UPLOAD_BIN_DIR: false
-  UPLOAD_FIRMWARE: false
+  UPLOAD_FIRMWARE: true
   UPLOAD_COWTRANSFER: false
   UPLOAD_WETRANSFER: false
   UPLOAD_RELEASE: false
@@ -47,7 +51,14 @@ jobs:
         df -hT $PWD
         git clone https://github.com/coolsnowwolf/lede.git openwrt
         ln -sf /lede/openwrt $GITHUB_WORKSPACE/openwrt
-        
+
+    - name: Load custom feeds
+      run: |
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P1_SH
+
     - name: 更新插件库
       run: | 
         cd /lede/openwrt && ./scripts/feeds update -a
@@ -55,7 +66,15 @@ jobs:
     - name: 安装插件库
       run: | 
         cd /lede/openwrt && ./scripts/feeds install -a
-        
+
+    - name: Load custom configuration
+      run: |
+        [ -e files ] && mv files openwrt/files
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        chmod +x $DIY_P2_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+
     - name: SSH connection to Actions
       uses: P3TERX/ssh2actions@main
       if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
